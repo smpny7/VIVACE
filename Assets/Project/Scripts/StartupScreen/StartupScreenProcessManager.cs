@@ -79,7 +79,7 @@ public class StartupScreenProcessManager : MonoBehaviour
     async void Start()
     {
         // PlayerPrefs.DeleteAll(); //ユーザ情報を初期化したい場合にコメントアウトを解除
-        ScreenResponsive();
+        //ScreenResponsive();
         audioSource = GetComponent<AudioSource>();
         this.showVersion.text = "Ver." + thisVersion;
         await Task.Delay(1000);

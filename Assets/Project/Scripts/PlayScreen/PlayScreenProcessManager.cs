@@ -68,7 +68,7 @@ public class PlayScreenProcessManager : MonoBehaviour
     async void Start()
     {
         // GUI Settings
-        ScreenResponsive();
+        //ScreenResponsive();
         TextInitialization();
         ColorInitialization();
         AudioInitialization();
