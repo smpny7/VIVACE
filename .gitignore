@@ -1,27 +1,32 @@
 # =============== #
 # Unity generated #
 # =============== #
-EnvDataStore.cs
-EnvDataStore.cs.meta
 
-Temp/
-Obj/
-UnityGenerated/
+Assets/AssetStoreTools*
+Build/
+Builds/
 Library/
+Obj/
+Temp/
 
 # ===================================== #
 # Visual Studio / MonoDevelop generated #
 # ===================================== #
 ExportedObj/
-*.svd
-*.userprefs
+.consulo/
 *.csproj
-*.pidb
-*.suo
-*.sln
-*.user
 *.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
 *.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
 
 # ============ #
 # OS generated #
@@ -34,6 +39,24 @@ ExportedObj/
 Icon?
 ehthumbs.db
 Thumbs.db
+
+# ================= #
+# Unity3D generated #
+# ================= #
+*.pidb.meta
+*.pdb.meta
+sysinfo.txt
+
+# ====== #
+# Builds #
+# ====== #
+*.apk
+*.unitypackage
+
+# ===================== #
+# Crashlytics generated #
+# ===================== #
+Assets/StreamingAssets/crashlytics-build.properties
 
 # ===== #
 # Notes #
@@ -50,6 +73,8 @@ Thumbs.db
 # ============ #
 # for others   #
 # ============ #
+EnvDataStore.cs
+EnvDataStore.cs.meta
 .vscode
 *.log
 sysinfo.txt

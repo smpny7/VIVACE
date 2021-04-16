@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_number": "473794852365",
+    "firebase_url": "https://vivace-30bff-default-rtdb.firebaseio.com",
+    "project_id": "vivace-30bff",
+    "storage_bucket": "vivace-30bff.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:473794852365:android:5e55d4119a122d7f2a0744",
+        "android_client_info": {
+          "package_name": "com.vivace_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "473794852365-93ptasdvtriac8pq05o8dtnqqojsvaje.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vivace_app",
+            "certificate_hash": "61c66a8628aa7f8eb3f28747a1261926e6944760"
+          }
+        },
+        {
+          "client_id": "473794852365-eovgtjovl99fqfqojakv71jn1f7ua5q8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vivace_app",
+            "certificate_hash": "47bbd5890253fbbdacfbc0300d24edc004c9fbc6"
+          }
+        },
+        {
+          "client_id": "473794852365-r3s8bs1ceasu8rt5pbnj9e8t5r4v4fus.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjIVxS1UzygdppqyYEflUYShz3UgBX1MY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "473794852365-r3s8bs1ceasu8rt5pbnj9e8t5r4v4fus.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

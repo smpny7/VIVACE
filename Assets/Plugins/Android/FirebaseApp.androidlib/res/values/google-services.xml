@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources tools:keep="@string/firebase_database_url,@string/gcm_defaultSenderId,@string/google_storage_bucket,@string/project_id,@string/google_api_key,@string/google_crash_reporting_api_key,@string/google_app_id,@string/default_android_client_id,@string/default_web_client_id" xmlns:tools="http://schemas.android.com/tools">
+  <string name="firebase_database_url" translatable="false">https://vivace-30bff-default-rtdb.firebaseio.com</string>
+  <string name="gcm_defaultSenderId" translatable="false">473794852365</string>
+  <string name="google_storage_bucket" translatable="false">vivace-30bff.appspot.com</string>
+  <string name="project_id" translatable="false">vivace-30bff</string>
+  <string name="google_api_key" translatable="false">AIzaSyAjIVxS1UzygdppqyYEflUYShz3UgBX1MY</string>
+  <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAjIVxS1UzygdppqyYEflUYShz3UgBX1MY</string>
+  <string name="google_app_id" translatable="false">1:473794852365:android:5e55d4119a122d7f2a0744</string>
+  <string name="default_android_client_id" translatable="false">473794852365-93ptasdvtriac8pq05o8dtnqqojsvaje.apps.googleusercontent.com</string>
+  <string name="default_web_client_id" translatable="false">473794852365-r3s8bs1ceasu8rt5pbnj9e8t5r4v4fus.apps.googleusercontent.com</string>
+</resources>

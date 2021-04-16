@@ -1,401 +1,119 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Firebase;
+using Firebase.Auth;
+using Firebase.Database;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class StartupScreenProcessManager : MonoBehaviour
 {
-
-    private AudioSource audioSource;
+    private AudioSource _audioSource;
     public AudioClip sound;
-    public GameObject panel = null;
-    public Text showVersion;
-    public Text messageTitle;
-    public Text messageText;
-    public Image messageButtonImage;
-    public Sprite messageButtonSpriteInfo;
-    public Sprite messageButtonSpriteError;
-    public Text messageButtonLabel;
-    public GameObject registerPanel = null;
-    public RectTransform Background;
-    public Text registerTitle;
-    public Text registerText;
-    public Text registerPlaceholder;
-    public Text registerBottom;
-    public Text showConnecting;
+    public GameObject panel;
+    public RectTransform background;
+    public Text versionDisplay;
     public Text inputUserName;
-    bool _touchableFlag = false;
-    bool _playableFlag = false;
-    bool _isRecoveryMode = false;
-    bool _continueButtonFlag = true; //trueのとき，Continueボタンを使用可能
+
+    private bool _touchableFlag = true;
 
     // ------------------------------------------------------------------------------------
-
-    static readonly string thisVersion = EnvDataStore.thisVersion;
-    static readonly string licenceApiUri = EnvDataStore.licenceApiUri;
-    static readonly string registerApiUri = EnvDataStore.registerApiUri;
-    static readonly string recoveryApiUri = EnvDataStore.recoveryApiUri;
-    static readonly bool ignoreNetworkProcess = false; // Allow setting to true only on emulator.
-
+    private const string ThisVersion = "1.1.0";
     // ------------------------------------------------------------------------------------
 
-    [Serializable]
-    public class licenseResponse
+    private class User
     {
-        public bool success;
-        public List<versionList> version;
+        public string username;
+
+        public User(string username)
+        {
+            this.username = username;
+        }
     }
 
-    [Serializable]
-    public class versionList
+    private async void Start()
     {
-        public string version;
-        public string expirationDate;
-    }
-
-    [Serializable]
-    public class registerResponse
-    {
-        public bool success;
-        public string msg;
-        public string name;
-        public string token;
-    }
-
-    [Serializable]
-    public class recoveryResponse
-    {
-        public bool success;
-        public string msg;
-        public string name;
-        public string token;
-    }
-
-    async void Start()
-    {
-        // PlayerPrefs.DeleteAll(); //ユーザ情報を初期化したい場合にコメントアウトを解除
+        PlayerPrefs.DeleteAll(); //ユーザ情報を初期化したい場合にコメントアウトを解除
         ScreenResponsive();
-        audioSource = GetComponent<AudioSource>();
-        this.showVersion.text = "Ver." + thisVersion;
-        await Task.Delay(1000);
-        _touchableFlag = true;
+        FirebaseInit();
+        _audioSource = GetComponent<AudioSource>();
+        versionDisplay.text = "Ver." + ThisVersion;
+        // await Task.Delay(1000);
+        // _touchableFlag = true; // TODO 必要？
     }
 
-    void Update()
+    private static void FirebaseInit()
     {
-        if (_touchableFlag && Input.GetMouseButtonUp(0))
+        // ReSharper disable once NotAccessedVariable
+        FirebaseApp firebaseApp;
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
         {
-            _touchableFlag = false;
-            audioSource.PlayOneShot(sound);
-            StartCoroutine(NetworkProcess());
-        }
+            var dependencyStatus = task.Result;
+            if (dependencyStatus == DependencyStatus.Available)
+                firebaseApp = FirebaseApp.DefaultInstance;
+            else
+                Debug.LogError($"Could not resolve all Firebase dependencies: {dependencyStatus}");
+        });
+    }
 
-        if (_touchableFlag && Input.touchCount > 0)
-        {
-            Touch touch = Input.GetTouch(0);
+    private void Update()
+    {
+        if (!_touchableFlag) return; // 初期化作業が終わっていない場合，処理を行わない
 
-            if (touch.phase == TouchPhase.Ended)
-            {
-                _touchableFlag = false;
-                audioSource.PlayOneShot(sound);
-                StartCoroutine(NetworkProcess());
-            }
-        }
+        if (Input.GetMouseButtonUp(0)) InitializationProcessManagerAsync(); // クリックが検出された場合 → 認証
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Ended)
+            InitializationProcessManagerAsync(); // タッチが検出された場合 → 認証
     }
 
     private void ScreenResponsive()
     {
-        float scale = 1f;
-        if (Screen.width < 1920)
-            scale = 1.5f;
-        if (Screen.width < Screen.height)
-            scale = (Screen.height * 16) / (Screen.width * 9);
-        Background.sizeDelta = new Vector2(Screen.width * scale, Screen.height * scale);
+        var scale = 1f;
+        if (Screen.width < 1920) scale = 1.5f;
+        if (Screen.width < Screen.height) scale = (float) (Screen.height * 16) / (Screen.width * 9);
+        background.sizeDelta = new Vector2(Screen.width * scale, Screen.height * scale);
     }
 
-    IEnumerator NetworkProcess()
+    private async void InitializationProcessManagerAsync()
     {
-        if (ignoreNetworkProcess)
+        _touchableFlag = false;
+        _audioSource.PlayOneShot(sound); // タッチ音を鳴らす
+        await FirebaseAuthenticationAsync();
+        if (PlayerPrefs.HasKey("username")) SceneManager.LoadScene("SelectScene");
+    }
+
+    private async Task FirebaseAuthenticationAsync()
+    {
+        var auth = FirebaseAuth.DefaultInstance;
+        var reference = FirebaseDatabase.DefaultInstance.RootReference;
+        if (auth.CurrentUser.UserId == null) // 認証済みユーザかどうか
         {
-            UserCheck();
+            var userid = await auth.SignInAnonymouslyAsync()
+                .ContinueWith(task => !task.IsCanceled && !task.IsFaulted ? task.Result.UserId : null);
+            PlayerPrefs.SetString("userid", userid);
+            panel.SetActive(true);
         }
         else
         {
-            this.showConnecting.text = "Connecting Server ...";
-            UnityWebRequest www = UnityWebRequest.Get(licenceApiUri);
-            yield return www.SendWebRequest();
-            if (www.isNetworkError || www.isHttpError)
-                ShowDialog(1, 0);
-            else
-                LicenseCheck(www.downloadHandler.text);
+            var snap = await reference.Child("users").Child(auth.CurrentUser.UserId).GetValueAsync();
+            var user = JsonUtility.FromJson<User>(snap.Value.ToString());
+            PlayerPrefs.SetString("userid", auth.CurrentUser.UserId);
+            PlayerPrefs.SetString("username", user.username);
         }
     }
 
-    private void LicenseCheck(string data)
+    private void LicenseActivation()
     {
-        DateTime dtLocal = new DateTime();
-        DateTime dtServer = new DateTime();
-        string latestVersion = String.Empty;
-
-        licenseResponse jsnData = JsonUtility.FromJson<licenseResponse>(data);
-
-        if (jsnData.success)
-        {
-            foreach (versionList x in jsnData.version)
-                latestVersion = x.version;
-
-            foreach (versionList x in jsnData.version)
-            {
-                if (thisVersion == latestVersion)
-                {
-                    this.showConnecting.text = "";
-                    UserCheck();
-                    break;
-                }
-                else if (thisVersion == x.version)
-                {
-                    dtLocal = DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd"));
-                    dtServer = DateTime.Parse(x.expirationDate);
-                    if (dtServer - dtLocal < new TimeSpan(0, 0, 0))
-                    {
-                        ShowDialog(3, 0);
-                        break;
-                    }
-                    else
-                    {
-                        _playableFlag = true;
-                        ShowDialog(0, (dtServer - dtLocal).Days);
-                        break;
-                    }
-                }
-            }
-        }
-        else
-        {
-            this.showConnecting.text = "";
-            ShowDialog(1, 0);
-        }
+        // TODO: ライセンス認証
     }
 
-    private async void ScreenTransition()
+    public async void RegisterButtonTappedController()
     {
-        await Task.Delay(1000);
-        SceneManager.LoadScene("DownloadScene");
-    }
-
-    public void ButtonTappedController()
-    {
-        if (_playableFlag)
-            UserCheck();
-        else
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    public void UserCheck()
-    {
-        if (PlayerPrefs.HasKey("name") && PlayerPrefs.HasKey("jwt"))
-            ScreenTransition();
-        else
-            ShowRegisterDialog(0);
-    }
-
-    private void ShowDialog(int arg, int day)
-    {
-        // Argument:
-        //      0 -> Not the Latest Version
-        //      1 -> Network Error
-        //      2 -> Timezone Error
-        //      3 -> End of Support
-
-        switch (arg)
-        {
-            case 0:
-                this.messageTitle.text = "NOTE";
-                this.messageTitle.color = new Color(1f / 255f, 164f / 255f, 255f / 255f);
-                this.messageText.text = "The latest version has been released.\nThis version will expire in " + day + " days.";
-                this.messageButtonLabel.text = "Continue";
-                this.messageButtonImage.sprite = messageButtonSpriteInfo;
-                this.showConnecting.text = "";
-                panel.SetActive(true);
-                break;
-            case 1:
-                this.messageTitle.text = "CAUTION !";
-                this.messageTitle.color = new Color(255f / 255f, 92f / 255f, 1f / 255f);
-                this.messageText.text = "Cannot connect to the API server.\nPlease check your network.";
-                this.messageButtonImage.sprite = messageButtonSpriteError;
-                this.messageButtonLabel.text = "Restart";
-                this.showConnecting.text = "";
-                panel.SetActive(true);
-                break;
-            case 2:
-                this.messageTitle.text = "CAUTION !";
-                this.messageTitle.color = new Color(255f / 255f, 92f / 255f, 1f / 255f);
-                this.messageText.text = "The device time is not set correctly.\nThe time zone is JST only.";
-                this.messageButtonImage.sprite = messageButtonSpriteError;
-                this.messageButtonLabel.text = "Restart";
-                this.showConnecting.text = "";
-                panel.SetActive(true);
-                break;
-            case 3:
-                this.messageTitle.text = "CAUTION !";
-                this.messageTitle.color = new Color(255f / 255f, 92f / 255f, 1f / 255f);
-                this.messageText.text = "Support for this version has ended.\nFor details, see our official website.";
-                this.messageButtonImage.sprite = messageButtonSpriteError;
-                this.messageButtonLabel.text = "Restart";
-                this.showConnecting.text = "";
-                panel.SetActive(true);
-                break;
-        }
-    }
-
-    public void ContinueButtonTappedController()
-    {
-        if (_continueButtonFlag)
-        {
-            _continueButtonFlag = false; //Continueボタンの連打を禁止
-            if (_isRecoveryMode)
-                StartCoroutine(RecoveryNetworkProcess());
-            else
-                StartCoroutine(RegisterNetworkProcess());
-        }
-    }
-
-    public void BottomButtonTappedController()
-    {
-        if (_isRecoveryMode)
-        {
-            _isRecoveryMode = false;
-            ShowRegisterDialog(0);
-        }
-        else
-        {
-            _isRecoveryMode = true;
-            ShowRegisterDialog(1);
-        }
-    }
-
-    IEnumerator RegisterNetworkProcess()
-    {
-        if (this.inputUserName.text.Length >= 3 && this.inputUserName.text.Length <= 15)
-        {
-            this.showConnecting.text = "Connecting Server ...";
-            WWWForm form = new WWWForm();
-            form.AddField("name", this.inputUserName.text);
-            UnityWebRequest www = UnityWebRequest.Post(registerApiUri, form);
-            yield return www.SendWebRequest();
-            if (www.isNetworkError)
-            {
-                ShowDialog(1, 0);
-                _continueButtonFlag = true; //Continueボタンを再度有効化
-            }
-            else
-            {
-                UserRegistCheck(www.downloadHandler.text);
-            }
-        }
-        else
-        {
-            this.registerText.text = "Please enter between 3 and 15 characters.";
-            _continueButtonFlag = true; //Continueボタンを再度有効化
-        }
-    }
-
-    async private void UserRegistCheck(string data)
-    {
-        registerResponse jsnData = JsonUtility.FromJson<registerResponse>(data);
-
-        if (jsnData.success)
-        {
-            this.showConnecting.text = "";
-            this.registerText.text = "";
-            PlayerPrefs.SetString("name", jsnData.name);
-            PlayerPrefs.SetString("jwt", jsnData.token);
-            await Task.Delay(1000);
-            ScreenTransition();
-        }
-        else if (!jsnData.success)
-        {
-            this.registerText.text = "This name is already in use.";
-            _continueButtonFlag = true; //Continueボタンを再度有効化
-        }
-    }
-
-    IEnumerator RecoveryNetworkProcess()
-    {
-        if (this.inputUserName.text.Length == 8)
-        {
-            this.showConnecting.text = "Connecting Server ...";
-            WWWForm form = new WWWForm();
-            form.AddField("code", this.inputUserName.text);
-            UnityWebRequest www = UnityWebRequest.Post(recoveryApiUri, form);
-            yield return www.SendWebRequest();
-            if (www.isNetworkError)
-            {
-                ShowDialog(1, 0);
-                _continueButtonFlag = true; //Continueボタンを再度有効化
-            }
-            else
-            {
-                RecoveryCodeCheck(www.downloadHandler.text);
-            }
-        }
-        else
-        {
-            this.registerText.text = "Please enter 8 characters.";
-            _continueButtonFlag = true; //Continueボタンを再度有効化
-        }
-    }
-
-    async private void RecoveryCodeCheck(string data)
-    {
-        recoveryResponse jsnData = JsonUtility.FromJson<recoveryResponse>(data);
-
-        if (jsnData.success)
-        {
-            this.showConnecting.text = "";
-            this.registerText.text = "";
-            PlayerPrefs.SetString("name", jsnData.name);
-            PlayerPrefs.SetString("jwt", jsnData.token);
-            await Task.Delay(1000);
-            ScreenTransition();
-        }
-        else if (!jsnData.success)
-        {
-            this.showConnecting.text = "";
-            this.registerText.text = "This code is invalid.";
-            _continueButtonFlag = true; //Continueボタンを再度有効化
-        }
-    }
-
-    private void ShowRegisterDialog(int arg)
-    {
-        // Argument:
-        //      0 -> Create
-        //      1 -> Restore
-
-        switch (arg)
-        {
-            case 0:
-                this.registerTitle.text = "ENTER  YOUR  NAME";
-                this.registerText.text = "";
-                this.registerPlaceholder.text = "Half-Width Alphanumeric Only...";
-                this.registerBottom.text = "Do you have Recovery Code ?";
-                this.showConnecting.text = "";
-                registerPanel.SetActive(true);
-                break;
-            case 1:
-                this.registerTitle.text = "ENTER  ISSUE  CODE";
-                this.registerText.text = "";
-                this.registerPlaceholder.text = "Your Code...";
-                this.registerBottom.text = "↩ Back to Create Account";
-                this.showConnecting.text = "";
-                registerPanel.SetActive(true);
-                break;
-        }
+        if (inputUserName.text.Length < 3) return;
+        PlayerPrefs.SetString("username", inputUserName.text);
+        var user = new User(PlayerPrefs.GetString("username"));
+        var json = JsonUtility.ToJson(user);
+        var reference = FirebaseDatabase.DefaultInstance.RootReference;
+        await reference.Child("users").Child(PlayerPrefs.GetString("userid")).SetValueAsync(json);
+        SceneManager.LoadScene("SelectScene");
     }
 }
