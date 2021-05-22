@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using DG.Tweening;
@@ -22,17 +23,20 @@ public class PlayScreenProcessManager : MonoBehaviour
     // ------------------------------------------------------------------------------------
 
     // --- External variables -------------------------------------------------------------
-    public const bool IsAutoPlay = false; // 参照: NotesScript.
     public static bool IsPlaying; // 参照: NotesScript.
     public static int Score, Perfect, Great, Good, Miss; // 参照: ResultScreenProcessManager.
     public float notesSpeedIndex = 5.0f; // 3.0f ~ 8.0f の値. 参照: NotesScript.
 
-    public static Vector3 FallPerFrame; // 参照: NotesScript.
+    /* 負荷軽減のため，レーン上にある全ノーツにアタッチしているNotesScriptを生成時に格納  */
+    public List<NotesScript> lane0; // 参照: NotesScript, TouchEvent.
+    public List<NotesScript> lane1; // 参照: NotesScript, TouchEvent.
+    public List<NotesScript> lane2; // 参照: NotesScript, TouchEvent.
+    public List<NotesScript> lane3; // 参照: NotesScript, TouchEvent.
+    public List<NotesScript> lane4; // 参照: NotesScript, TouchEvent.
     // ------------------------------------------------------------------------------------
 
     // --- Environment variables ----------------------------------------------------------
     private static readonly string RegistScoreApiUri = EnvDataStore.registScoreApiUri;
-
     private static readonly string[] MusicTitles = MusicTitleDataStore.musicTitles;
     // ------------------------------------------------------------------------------------
 
@@ -63,11 +67,11 @@ public class PlayScreenProcessManager : MonoBehaviour
     private Tweener _jTextFade, _jTextReduce, _aTextFade, _aTextReduce;
     // ====================================================================================
 
-    [Serializable]
-    public class RegistScoreResponse
-    {
-        public bool success;
-    }
+    // [Serializable]
+    // public class RegistScoreResponse
+    // {
+    //     public bool success;
+    // }
 
     // ====================================================================================
 
@@ -79,18 +83,18 @@ public class PlayScreenProcessManager : MonoBehaviour
         ColorInitialization();
         AudioInitialization();
         AdjustJudgeRange();
+        ListInitialization();
 
         _startTimingIndex = (PlayerPrefs.GetInt("TimingAdjustment", 5) - 5) * 10; // 判定調整
         notesSpeedIndex = 5.0f + (PlayerPrefs.GetInt("NotesFallSpeed", 5) - 5) * 0.5f;
-        FallPerFrame = (Vector3.down + Vector3.back * (float) Math.Sqrt(3)) * 0.6f * notesSpeedIndex; // ノーツ落下速度
 
         LoadCsv();
         BaseScoreCalculation();
 
         IsPlaying = true;
-        
+
         _startTime = Time.time;
-        await Task.Delay((int) ((7800 + 10 * _startTimingIndex) / notesSpeedIndex));
+        await Task.Delay((int) ((8000 + 10 * _startTimingIndex) / notesSpeedIndex));
         _playAudioSource.Play();
 
         _isEndOfPlay = true;
@@ -159,11 +163,23 @@ public class PlayScreenProcessManager : MonoBehaviour
     private void AdjustJudgeRange()
     {
         var perfectRange = GameObject.Find("PerfectJudgeLine").GetComponent<Transform>();
-        perfectRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.2f * 0.12f);
+        perfectRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.4f * 0.15f);
         var greatRange = GameObject.Find("GreatJudgeLine").GetComponent<Transform>();
-        greatRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.2f * 0.18f);
+        greatRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.4f * 0.19f);
         var goodRange = GameObject.Find("GoodJudgeLine").GetComponent<Transform>();
-        goodRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.2f * 0.2f);
+        goodRange.transform.localScale = new Vector3(1.8f, 0.1f, notesSpeedIndex * 1.4f * 0.23f);
+    }
+    
+    /// <summary>
+    /// リストの初期化をします。．
+    /// </summary>  
+    private void ListInitialization()
+    {
+        lane0 = new List<NotesScript>();
+        lane1 = new List<NotesScript>();
+        lane2 = new List<NotesScript>();
+        lane3 = new List<NotesScript>();
+        lane4 = new List<NotesScript>();
     }
 
     /// <summary>
@@ -172,7 +188,7 @@ public class PlayScreenProcessManager : MonoBehaviour
     private void LoadCsv()
     {
         if (!(Resources.Load("CSV/" + MusicTitles[SwipeMenu.selectedNumTmp] + "_" +
-                             SelectScreenProcessManager.selectedLevel) is TextAsset { } csv)) return;
+                             SelectScreenProcessManager.selectedLevel) is TextAsset csv)) return;
         var reader = new StringReader(csv.text);
         while (reader.Peek() > -1)
         {
@@ -216,8 +232,29 @@ public class PlayScreenProcessManager : MonoBehaviour
     /// </summary>
     private void SpawnNotes(int lineNum)
     {
-        Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
-            Quaternion.Euler(-30f, 0, 0));
+        switch (lineNum)
+        {
+            case 0:
+                lane0.Add(Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
+                    Quaternion.Euler(-30f, 0, 0)).GetComponent<NotesScript>());
+                break;
+            case 1:
+                lane1.Add(Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
+                    Quaternion.Euler(-30f, 0, 0)).GetComponent<NotesScript>());
+                break;
+            case 2:
+                lane2.Add(Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
+                    Quaternion.Euler(-30f, 0, 0)).GetComponent<NotesScript>());
+                break;
+            case 3:
+                lane3.Add(Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
+                    Quaternion.Euler(-30f, 0, 0)).GetComponent<NotesScript>());
+                break;
+            case 4:
+                lane4.Add(Instantiate(notes[lineNum], new Vector3(-0.73f + (0.365f * lineNum), 5.4f, -0.57f),
+                    Quaternion.Euler(-30f, 0, 0)).GetComponent<NotesScript>());
+                break;
+        }
     }
 
     /// <summary>
@@ -427,23 +464,17 @@ public class PlayScreenProcessManager : MonoBehaviour
         form.AddField("score", Score);
         var www = UnityWebRequest.Post(RegistScoreApiUri, form);
         yield return www.SendWebRequest();
-        if (www.isNetworkError)
-        {
-            Debug.LogError("ネットワークに接続できません．(" + www.error + ")");
-        }
-        else
-        {
-            ResponseCheck(www.downloadHandler.text);
-        }
+        // if (!www.isNetworkError)
+            // ResponseCheck(www.downloadHandler.text);
     }
 
-    /// <summary>
-    /// APIサーバからのレスポンスを確認します．
-    /// </summary>
-    private static void ResponseCheck(string data)
-    {
-        var jsnData = JsonUtility.FromJson<RegistScoreResponse>(data);
-
-        Debug.Log(jsnData.success ? "スコアを登録しました" : "スコアの登録に失敗しました");
-    }
+    // /// <summary>
+    // /// APIサーバからのレスポンスを確認します．
+    // /// </summary>
+    // private static void ResponseCheck(string data)
+    // {
+    //     var jsnData = JsonUtility.FromJson<RegistScoreResponse>(data);
+    //
+    //     Debug.Log(jsnData.success ? "スコアを登録しました" : "スコアの登録に失敗しました");
+    // }
 }

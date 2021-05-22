@@ -1,18 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class TouchEvent : MonoBehaviour
 {
-    public static int[] OnTouch = { 0, 0, 0, 0, 0 };
+    public PlayScreenProcessManager playScreenProcessManager;
 
-    public void Touch(int num) //クリック・タッチ中
-    {
-        OnTouch[num] = 1;
-    }
+    public void ONClick0() => playScreenProcessManager.lane0[0].ONLaneTapped(0);
 
-    public void Up(int num) //クリックまたはタッチを離したとき
-    {
-        OnTouch[num] = 0;
-    }
+    public void ONClick1() => playScreenProcessManager.lane1[0].ONLaneTapped(1);
+
+    public void ONClick2() => playScreenProcessManager.lane2[0].ONLaneTapped(2);
+
+    public void ONClick3() => playScreenProcessManager.lane3[0].ONLaneTapped(3);
+
+    public void ONClick4() => playScreenProcessManager.lane4[0].ONLaneTapped(4);
 }
